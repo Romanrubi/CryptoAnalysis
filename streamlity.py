@@ -1,13 +1,6 @@
 import streamlit as st
 import pandas as pd
 
-# Try to import polars; if not installed, notify the user.
-try:
-    import polars as pl
-    POLARS_AVAILABLE = True
-except ImportError:
-    POLARS_AVAILABLE = False
-
 # ---------------------------
 # Data Processing Functions
 # ---------------------------
@@ -31,28 +24,6 @@ def create_pivot_table_pandas(df: pd.DataFrame) -> pd.DataFrame:
     pivot_df.reset_index(inplace=True)
     return pivot_df
 
-def create_pivot_table_polars(pl_df: pl.DataFrame):
-    """Create a pivot table using polars.
-    
-    Note: Polars’ pivot API supports single-column pivoting.
-    For multi-dimensional pivoting (here: Exchange and Type),
-    we first combine these columns into one.
-    """
-    # Create a new column combining Exchange and Type
-    pl_df = pl_df.with_columns(
-        (pl.col("Exchange").cast(str) + " - " + pl.col("Type").cast(str)).alias("Exchange_Type")
-    )
-    try:
-        pivot_pl = (
-            pl_df
-            .groupby(["Date", "Currency"])
-            .pivot(values="Amount", index=["Date", "Currency"], columns="Exchange_Type")
-            .fill_null(0)
-        )
-    except Exception as e:
-        st.error(f"Error while creating pivot with polars: {e}")
-        return None
-    return pivot_pl
 
 # ---------------------------
 # Main Streamlit App
@@ -67,92 +38,54 @@ def main():
         # Load data using pandas (Excel reading is done via pandas)
         df_pandas = load_excel_data(uploaded_file)
         st.success("File uploaded and processed successfully!")
-        
-        # Option to choose processing library:
-        lib_options = ["pandas"]
-        if POLARS_AVAILABLE:
-            lib_options.append("polars")
-        library_choice = st.sidebar.selectbox("Choose Data Library", lib_options)
-        
-        # If using polars, convert the DataFrame
-        if library_choice == "polars":
-            df = pl.from_pandas(df_pandas)
-        else:
-            df = df_pandas
+        df = df_pandas
 
         # -------------
         # Sidebar Filters
         # -------------
         st.sidebar.header("Filter Options")
         
-        # --- Date Range Filter ---
-        if library_choice == "pandas":
-            min_date = df['Date'].min().date()
-            max_date = df['Date'].max().date()
-        else:
-            # For polars, extract min and max dates then convert to Python dates.
-            min_date = pd.to_datetime(df.select(pl.col("Date").min()).item()).date()
-            max_date = pd.to_datetime(df.select(pl.col("Date").max()).item()).date()
 
+        min_date = df['Date'].min().date()
+        max_date = df['Date'].max().date()
         date_range = st.sidebar.date_input("Select Date Range", [min_date, max_date])
+
+        
         if not isinstance(date_range, list) or len(date_range) != 2:
             st.error("Please select both a start and an end date.")
             return
         start_date, end_date = date_range
 
         # --- Exchange Filter ---
-        if library_choice == "pandas":
-            exchanges = sorted(df['Exchange'].dropna().unique().tolist())
-        else:
-            exchanges = sorted(df["Exchange"].unique().to_list())
-        selected_exchanges = st.sidebar.multiselect("Select Exchanges", options=exchanges, default=exchanges)
+        exchanges = sorted(df['Exchange'].dropna().unique().tolist())
 
         # --- Transaction Type Filter ---
-        if library_choice == "pandas":
-            types = sorted(df['Type'].dropna().unique().tolist())
-        else:
-            types = sorted(df["Type"].unique().to_list())
+
+        types = sorted(df['Type'].dropna().unique().tolist())
         selected_types = st.sidebar.multiselect("Select Transaction Types", options=types, default=types)
 
         # --- Currency Filter ---
-        if library_choice == "pandas":
-            currencies = sorted(df['Currency'].dropna().unique().tolist())
-        else:
-            currencies = sorted(df["Currency"].unique().to_list())
+
+        currencies = sorted(df['Currency'].dropna().unique().tolist())
         selected_currencies = st.sidebar.multiselect("Select Currencies", options=currencies, default=currencies)
 
         # -------------
         # Filtering Data
         # -------------
-        if library_choice == "pandas":
-            mask = (
+
+        mask = (
                 (df['Date'] >= pd.to_datetime(start_date)) &
                 (df['Date'] <= pd.to_datetime(end_date)) &
                 (df['Exchange'].isin(selected_exchanges)) &
                 (df['Type'].isin(selected_types)) &
                 (df['Currency'].isin(selected_currencies))
-            )
-            filtered_df = df.loc[mask]
-        else:
-            # For polars, convert the date filter to pandas Timestamps first.
-            start_ts = pd.to_datetime(start_date)
-            end_ts = pd.to_datetime(end_date)
-            filtered_df = df.filter(
-                (pl.col("Date") >= start_ts) &
-                (pl.col("Date") <= end_ts) &
-                (pl.col("Exchange").is_in(selected_exchanges)) &
-                (pl.col("Type").is_in(selected_types)) &
-                (pl.col("Currency").is_in(selected_currencies))
-            )
+        )
+        filtered_df = df.loc[mask]
 
         st.subheader("Filtered Data")
-        if library_choice == "pandas":
-            st.dataframe(filtered_df)
-            no_data = filtered_df.empty
-        else:
-            st.dataframe(filtered_df.to_pandas())
-            no_data = (filtered_df.height == 0)
-
+        st.dataframe(filtered_df)
+        no_data = filtered_df.empty
+        
         if no_data:
             st.warning("No data found for the selected filters.")
         else:
