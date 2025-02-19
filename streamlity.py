@@ -82,7 +82,7 @@ def main():
             # ---------------------------
             # Creating Pivot Table
             # ---------------------------
-            st.subheader("Nissani Table")
+            st.subheader("Pivot Table")
             pivot_df = create_pivot_table(filtered_df)
             st.dataframe(pivot_df)
     else:
