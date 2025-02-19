@@ -28,8 +28,12 @@ def create_pivot_table(df: pd.DataFrame) -> pd.DataFrame:
 
 def pivot_to_long(pivot_df: pd.DataFrame) -> pd.DataFrame:
     """Convert the wide pivot table to a long format for easier merging and comparison."""
+    # Use only id_vars that are present in the DataFrame
+    id_vars = [col for col in ['Date', 'Currency'] if col in pivot_df.columns]
+    if not id_vars:
+        raise KeyError("None of the expected id_vars ('Date', 'Currency') were found in the DataFrame.")
     long_df = pivot_df.melt(
-        id_vars=['Date', 'Currency'],
+        id_vars=id_vars,
         var_name=['Exchange', 'Type'],
         value_name='Amount'
     )
@@ -74,6 +78,10 @@ def main():
         # Generate pivot tables for each file
         pivot_df1 = create_pivot_table(df1)
         pivot_df2 = create_pivot_table(df2)
+        
+        # Debug print to check pivot table columns
+        st.write("Pivot Table 1 Columns:", pivot_df1.columns.tolist())
+        st.write("Pivot Table 2 Columns:", pivot_df2.columns.tolist())
         
         # Display the pivot tables
         st.subheader("Pivot Table - File 1")
