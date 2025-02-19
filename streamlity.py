@@ -74,7 +74,7 @@ def main():
         )
         filtered_df = df.loc[mask]
 
-        st.subheader("Filtered Data")
+        st.subheader("The Data")
         st.dataframe(filtered_df)
         if filtered_df.empty:
             st.warning("No data found for the selected filters.")
