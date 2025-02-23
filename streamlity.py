@@ -107,8 +107,8 @@ def main():
         st.success("Both files uploaded and processed successfully!")
         
         # Display data period for each file.
-        st.write(f"**File 1 Period:** {df1['Date'].min().date()} to {df1['Date'].max().date()}")
-        st.write(f"**File 2 Period:** {df2['Date'].min().date()} to {df2['Date'].max().date()}")
+        st.write(f"**File 1 Period:** {df1['Date'].min()} to {df1['Date'].max()}")
+        st.write(f"**File 2 Period:** {df2['Date'].min()} to {df2['Date'].max()}")
         
         # Generate pivot tables for each file.
         pivot_df1 = create_pivot_table(df1)
