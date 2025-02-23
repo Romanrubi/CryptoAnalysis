@@ -16,7 +16,7 @@ def load_excel_data(file) -> pd.DataFrame:
         for col in ['Date', 'Currency', 'Exchange', 'Type', 'Amount']:
             if col not in df.columns:
                 raise KeyError(f"Expected column '{col}' not found. Found columns: {df.columns.tolist()}")
-        df['Date'] = pd.to_datetime(df['Date'])
+        df['Date'] = pd.to_datetime(df['Date']).dt.date
         df['Amount'] = pd.to_numeric(df['Amount'], errors='coerce')
         return df
     except Exception as e:
